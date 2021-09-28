@@ -24,8 +24,8 @@ version.
 Just with few commands, its ready to serve your cluster.
 
 ```bash
-git clone https://github.com/devtron-labs/silver-surfer.git
-cd silver-surfer
+git clone https://github.com/jpl154/kubedd.git
+cd kubedd
 make
 ```
 
