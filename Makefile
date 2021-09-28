@@ -1,6 +1,6 @@
 NAME=kubedd
-IMAGE_NAME=devtron/$(NAME)
-PACKAGE_NAME=github.com/devtron-labs/$(NAME)
+IMAGE_NAME=jpl154/$(NAME)
+PACKAGE_NAME=github.com/jpl154/$(NAME)
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 TAG=$(shell git describe --abbrev=0 --tags)
 
