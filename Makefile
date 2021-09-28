@@ -13,6 +13,7 @@ $(GOPATH)/bin/goveralls$(suffix):
 	go get github.com/mattn/goveralls
 
 vendor:
+	go mod tidy
 	go mod vendor
 
 .bats:
