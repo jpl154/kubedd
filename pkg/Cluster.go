@@ -14,6 +14,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/aws"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 type Cluster struct {
