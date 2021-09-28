@@ -4,9 +4,7 @@ PACKAGE_NAME=github.com/devtron-labs/$(NAME)
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 TAG=$(shell git describe --abbrev=0 --tags)
 
-all: 
-	vendor
-	build
+all: build
 
 $(GOPATH)/bin/golint$(suffix):
 	go get github.com/golang/lint/golint
@@ -34,6 +32,8 @@ snapshot:
 	goreleaser --snapshot --skip-publish --rm-dist
 
 build: bin
+	go mod tidy
+	go mod vendor
 	go build -o bin/$(NAME) .
 
 lint: $(GOPATH)/bin/golint$(suffix)
