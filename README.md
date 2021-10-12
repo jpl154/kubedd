@@ -24,9 +24,11 @@ version.
 Just with few commands, its ready to serve your cluster.
 
 ```bash
-git clone https://github.com/jpl154/kubedd.git
-cd kubedd
-make
+git clone https://github.com/devtron-labs/silver-surfer.git
+cd silver-surfer
+go mod vendor
+go mod download
+make 
 ```
 
 It's done. A `bin` directory might have created with the binary ready to use `./kubedd` command.
