@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/devtron-labs/silver-surfer/pkg/errors"
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi2conv"
 	"github.com/getkin/kin-openapi/openapi3"
@@ -54,7 +55,7 @@ type Parser interface {
 }
 
 type KubeChecker interface {
-	IsApiVersionSupported(releaseVersion, apiVersion, kind string)  bool
+	IsApiVersionSupported(releaseVersion, apiVersion, kind string) bool
 	Parser
 	Validator
 }
@@ -114,6 +115,9 @@ func (k *kubeCheckerImpl) downloadFile(releaseVersion string) ([]byte, error) {
 		return []byte{}, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return []byte{}, errors.ErrOpenApiSpecNotFound
+	}
 	var out bytes.Buffer
 	_, err = io.Copy(&out, resp.Body)
 	if err != nil {
@@ -177,9 +181,9 @@ func (k *kubeCheckerImpl) loadOpenApi2(data []byte) (*openapi3.T, error) {
 		//kLog.Debug(fmt.Sprintf("%v", err))
 		return nil, err
 	}
-	for _, v := range doc.Components.Schemas {
-		v.Value.AdditionalPropertiesAllowed = openapi3.BoolPtr(false)
-	}
+	//for _, v := range doc.Components.Schemas {
+	//	v.Value.AdditionalPropertiesAllowed = openapi3.BoolPtr(false)
+	//}
 	return doc, nil
 }
 

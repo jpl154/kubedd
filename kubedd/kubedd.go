@@ -22,7 +22,9 @@ import (
 	"fmt"
 	"github.com/devtron-labs/silver-surfer/pkg"
 	kLog "github.com/devtron-labs/silver-surfer/pkg/log"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"os"
+	"strings"
 )
 
 var yamlSeparator = []byte("\n---\n")
@@ -89,14 +91,15 @@ func ValidateCluster(cluster *pkg.Cluster, conf *pkg.Config) ([]pkg.ValidationRe
 		err := kubeC.LoadFromUrl(conf.TargetKubernetesVersion, false)
 		if err != nil {
 			kLog.Error(err)
-			os.Exit(1)
+			return make([]pkg.ValidationResult, 0), err
 		}
 	}
 	serverVersion, err := cluster.ServerVersion()
 	if err != nil {
-		kLog.Error( err)
+		kLog.Error(err)
 		serverVersion = conf.TargetKubernetesVersion
 	}
+	fmt.Println("current cluster server version:- ", serverVersion)
 	resources, err := kubeC.GetKinds(serverVersion)
 	if err != nil {
 		kLog.Error(err)
@@ -114,24 +117,31 @@ func ValidateCluster(cluster *pkg.Cluster, conf *pkg.Config) ([]pkg.ValidationRe
 		annotations := obj.GetAnnotations()
 		k8sObj := ""
 		if val, ok := annotations["kubectl.kubernetes.io/last-applied-configuration"]; ok {
-			k8sObj = val
-		} else {
+			var uns unstructured.Unstructured
+			if err := uns.UnmarshalJSON([]byte(val)); err != nil {
+				if strings.EqualFold(uns.GetKind(), obj.GetKind()) {
+					k8sObj = val
+				}
+			}
+		}
+		if len(k8sObj) == 0 {
 			bt, err := obj.MarshalJSON()
 			if err != nil {
 				continue
 			}
 			k8sObj = string(bt)
 		}
-		validationResult, err := kubeC.ValidateJson(k8sObj, conf.TargetKubernetesVersion)
-		if err != nil {
-			fmt.Printf("err: %v\n", err)
-			continue
+		if len(k8sObj) > 0 {
+			validationResult, err := kubeC.ValidateJson(k8sObj, conf.TargetKubernetesVersion)
+			if err != nil {
+				fmt.Printf("err: %v\n", err)
+				continue
+			}
+			//validationResult = isVersionSupported(validationResult, kubeC, conf)
+			validationResult = pkg.FilterValidationResults(validationResult, conf)
+			validationResults = append(validationResults, validationResult)
 		}
-		//validationResult = isVersionSupported(validationResult, kubeC, conf)
-		validationResult = pkg.FilterValidationResults(validationResult, conf)
-		validationResults = append(validationResults, validationResult)
 	}
-
 
 	return validationResults, nil
 }
@@ -168,4 +178,3 @@ func ValidateCluster(cluster *pkg.Cluster, conf *pkg.Config) ([]pkg.ValidationRe
 //		return result
 //	}
 //}
-

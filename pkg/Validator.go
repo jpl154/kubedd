@@ -28,8 +28,6 @@ import (
 	"strings"
 )
 
-
-
 type kubeSpec struct {
 	*openapi3.T
 	kindInfoMap map[string][]*KindInfo
@@ -62,6 +60,7 @@ func (ks *kubeSpec) ValidateJson(spec string) (ValidationResult, error) {
 	return ks.ValidateObject(object)
 }
 
+// ks -> holds current server version of cluster , object -> target k8s version's object
 func (ks *kubeSpec) ValidateObject(object map[string]interface{}) (ValidationResult, error) {
 	validationResult, err := ks.populateValidationResult(object)
 	validationResult.ValidatedAgainstSchema = true
@@ -89,10 +88,18 @@ func (ks *kubeSpec) ValidateObject(object map[string]interface{}) (ValidationRes
 		validationResult.ErrorsForOriginal = ves
 		validationResult.DeprecationForOriginal = des
 		validationResult.Deprecated = deprecated
-	} else if len(original) == 0 && len(latest) > 0 {
+		//if original == latest {
+		//	validationResult.ErrorsForLatest = ves
+		//	validationResult.DeprecationForLatest = des
+		//}
+	} else if len(latest) == 0 { //if original and latest both are not present i.e; this has been completely removed eg psp
 		validationResult.Deleted = true
+		validationResult.IsVersionSupported = 2
+	} else if len(latest) > 0 { //if original is not present but latest is then original is removed
+		validationResult.Deleted = true
+		validationResult.IsVersionSupported = 2
 	}
-	if len(latest) > 0 && original != latest {
+	if len(latest) > 0 && original != latest { //compute only if latest is different from original i.e; newer version is available
 		var ves []*openapi3.SchemaError
 		var des []*SchemaError
 		validationError, _ := ks.applySchema(object, latest)
@@ -113,6 +120,7 @@ func (ks *kubeSpec) ValidateObject(object map[string]interface{}) (ValidationRes
 	return validationResult, nil
 }
 
+// buildGVKRestPathMap goes through openApi3 spec of specified k8s version and prepares map of gvk, and it's api-server path
 func (ks *kubeSpec) buildGVKRestPathMap() map[string]string {
 	pathMap := map[string]string{}
 	for path, value := range ks.T.Paths {
@@ -255,7 +263,7 @@ func (ks *kubeSpec) applySchema(object map[string]interface{}, token string) (op
 
 	opts := []openapi3.SchemaValidationOption{openapi3.MultiErrors()}
 	depError := VisitJSON(scm, object, SchemaSettings{MultiError: true})
-	if len(depError) > 0 {
+	if strings.Index(strings.ToLower(scm.Description), "deprecated") >= 0 {
 		deprecated = true
 	}
 	validationError = append(validationError, depError...)
@@ -282,7 +290,7 @@ func (ks *kubeSpec) getKeyForGVFromToken(token string) (string, error) {
 }
 
 func (ks *kubeSpec) schemaLookup(token string) (*openapi3.Schema, error) {
-	for ; ; {
+	for {
 		if strings.Index(token, "/") > 0 {
 			parts := strings.Split(token, "/")
 			token = parts[len(parts)-1]
@@ -324,7 +332,7 @@ func (ks *kubeSpec) getKindsMappings(object map[string]interface{}) (original, l
 				original = ki.ComponentKey
 			}
 		}
-		if len(kis) > 0 {
+		if len(kis) > 0 { // most resent entry is the latest one
 			latest = kis[len(kis)-1].ComponentKey
 		}
 	}
